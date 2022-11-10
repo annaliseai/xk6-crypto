@@ -1,4 +1,4 @@
-module github.com/szkiba/xk6-crypto
+module github.com/rammstein4o/xk6-crypto
 
 go 1.17
 

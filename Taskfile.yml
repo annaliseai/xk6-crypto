@@ -1,6 +1,6 @@
 # MIT License
 #
-# Copyright (c) 2021 Iván Szkiba
+# Copyright (c) 2022 Radoslav Salov
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ tasks:
     generates:
       - k6
     cmds:
-      - xk6 build --with github.com/szkiba/xk6-crypto=$(pwd)
+      - xk6 build --with github.com/rammstein4o/xk6-crypto=$(pwd)
 
   test:
     deps: [build]

@@ -43,5 +43,5 @@ Then:
 
 2. Build the binary:
   ```bash
-  $ xk6 build --with github.com/szkiba/xk6-crypto@latest
+  $ xk6 build --with github.com/rammstein4o/xk6-crypto@latest
   ```
