@@ -24,7 +24,7 @@
 
 export { options } from "./expect.js";
 import { describe } from "./expect.js";
-import { hkdf, pbkdf2, generateKeyPair, ecdh } from "k6/x/crypto";
+import { aes256Decrypt, aes256Encrypt, hkdf, pbkdf2, generateKeyPair, ecdh } from "k6/x/crypto";
 
 export default function () {
   describe("hkdf", (t) => {
@@ -59,4 +59,27 @@ export default function () {
       .as("shared secrets equals")
       .toBeTruthy();
   });
+
+  describe('aes256Encrypt', (t) => {
+    const dk = pbkdf2('po2jie0uiphohshaizeuch9Mau3Ree7Airie7ulovoh2Ohzi', 'emperorP', 10000, 48, 'sha256');
+    const key = dk.slice(0, 32);
+    const iv = dk.slice(32);
+
+    const encrypted = aes256Encrypt('ExecuteOrder6Six', key, iv);
+    t.expect(encrypted.byteLength).as('AES encoded key len').toEqual(16);
+  })
+
+  describe('aes256Decrypt', (t) => {
+    // const cipherText = 'XRg//ECBKrqCXsJr979CSw=='
+    // const decoded = atob(cipherText)
+
+    const encrypted = aes256Encrypt('ExecuteOrder6Six', 'Uwohw6aitiec7aoc3fohquohngumiob8', 'ohZieJei2xosh0th');
+
+    const decrypted = aes256Decrypt(
+        encrypted,
+        'Uwohw6aitiec7aoc3fohquohngumiob8',
+        'ohZieJei2xosh0th'
+    );
+    t.expect(decrypted.byteLength).as('AES decoded key len').toEqual(16);
+  })
 }

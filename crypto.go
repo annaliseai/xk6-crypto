@@ -24,6 +24,8 @@ package crypto
 
 import ( // nolint:gci
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ed25519"
 	"crypto/md5" // nolint
 	"crypto/rand"
@@ -37,10 +39,10 @@ import ( // nolint:gci
 	"strings"
 
 	"github.com/dop251/goja"
-	"go.k6.io/k6/js/common"
-	"go.k6.io/k6/js/modules"
 	ed25519X "github.com/oasisprotocol/ed25519"
 	x25519X "github.com/oasisprotocol/ed25519/extra/x25519"
+	"go.k6.io/k6/js/common"
+	"go.k6.io/k6/js/modules"
 	"golang.org/x/crypto/hkdf"
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -70,6 +72,7 @@ var (
 	ErrUnsupportedHash      = errors.New("unsupported hash")
 	ErrInvalidKeyLen        = errors.New("invalid keylen")
 	ErrUnsupportedAlgorithm = errors.New("unsupported algorithm")
+	ErrAES256BlockSize      = errors.New("ciphertext is not a multiple of the block size")
 
 	hashes = map[string]hashInfo{
 		"md5":    {fn: md5.New, size: md5.Size},
@@ -220,4 +223,78 @@ func sharedSecretED(privateKey ed25519.PrivateKey, publicKey ed25519.PublicKey) 
 	}
 
 	return b, nil
+}
+
+func (c *Crypto) Aes256Encrypt(ctx context.Context, plaintext, key, nonce interface{}) (interface{}, error) {
+	bPlaintext, err := bytes(plaintext)
+	if err != nil {
+		return nil, err
+	}
+
+	bKey, err := bytes(key)
+	if err != nil {
+		return nil, err
+	}
+
+	bNonce, err := bytes(nonce)
+	if err != nil {
+		return nil, err
+	}
+
+	key, err = bytes(key)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(bPlaintext)%aes.BlockSize != 0 {
+		return nil, ErrAES256BlockSize
+	}
+
+	block, err := aes.NewCipher(bKey)
+	if err != nil {
+		return nil, err
+	}
+
+	ciphertext := make([]byte, len(bPlaintext))
+
+	mode := cipher.NewCBCEncrypter(block, bNonce)
+	mode.CryptBlocks(ciphertext, bPlaintext)
+
+	return common.GetRuntime(ctx).NewArrayBuffer(ciphertext), nil
+}
+
+func (c *Crypto) Aes256Decrypt(ctx context.Context, encrypted, key, nonce interface{}) (interface{}, error) {
+	ciphertext, err := bytes(encrypted)
+	if err != nil {
+		return nil, err
+	}
+
+	bKey, err := bytes(key)
+	if err != nil {
+		return nil, err
+	}
+
+	bNonce, err := bytes(nonce)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(bKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(ciphertext) < aes.BlockSize {
+		return nil, errors.New("ciphertext too short")
+	}
+
+	if len(ciphertext)%aes.BlockSize != 0 {
+		return nil, ErrAES256BlockSize
+	}
+
+	plaintext := make([]byte, len(ciphertext))
+	mode := cipher.NewCBCDecrypter(block, bNonce)
+	mode.CryptBlocks(plaintext, ciphertext)
+
+	return common.GetRuntime(ctx).NewArrayBuffer(plaintext), nil
 }

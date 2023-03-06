@@ -115,3 +115,23 @@ export declare function generateKeyPair(algorithm: string, seed?: ByteArrayLike)
  * @returns The derived shared secret. The result will be same with Bob's private key and Alice's public key.
  */
 export declare function ecdh(algorithm: string, privateKey: ArrayBuffer, publicKey: ArrayBuffer): ArrayBuffer;
+
+/**
+ * Advanced Encryption Standard (AES) 256-bit encryption implementation.
+ *
+ *
+ * @param plaintext
+ * @param key
+ * @param nonce
+ */
+export declare function aes256Encrypt(plaintext: ByteArrayLike, key: ByteArrayLike, nonce: ByteArrayLike): ArrayBuffer;
+
+/**
+ * Advanced Encryption Standard (AES) 256-bit decryption implementation.
+ *
+ *
+ * @param encrypted
+ * @param key
+ * @param nonce
+ */
+export declare function aes256Decrypt(encrypted: ByteArrayLike, key: ByteArrayLike, nonce: ByteArrayLike,): ArrayBuffer;
