@@ -266,76 +266,74 @@ func sharedSecretED(privateKey ed25519.PrivateKey, publicKey ed25519.PublicKey) 
 	return b, nil
 }
 
-func (c *Crypto) Aes256Encrypt(ctx context.Context, plaintext, key, nonce interface{}) (interface{}, error) {
-	bPlaintext, err := bytes(plaintext)
+// Aes256Encrypt plaintext interface{}, key interface{}, nonce interface{}
+func (c *Crypto) Aes256Encrypt(call goja.FunctionCall, rt *goja.Runtime /*plaintext, key, nonce interface{}*/) goja.Value {
+	var plaintext, key, nonce []byte
+	var err error
+
+	if plaintext, err = bytes(call.Argument(0)); err != nil {
+		return rt.ToValue(fmt.Sprintf("error: plaintext %v", err))
+	}
+
+	if key, err = bytes(call.Argument(1)); err != nil {
+		return rt.ToValue(fmt.Sprintf("error: key %v", err))
+	}
+
+	if nonce, err = bytes(call.Argument(2)); err != nil {
+		return rt.ToValue(fmt.Sprintf("error: nonce %v", err))
+	}
+
+	if len(plaintext)%aes.BlockSize != 0 {
+		return rt.ToValue(fmt.Sprintf("%s: %d", ErrAES256BlockSize.Error(), len(plaintext)))
+	}
+
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return rt.ToValue(fmt.Sprintf("%s", err.Error()))
 	}
 
-	bKey, err := bytes(key)
-	if err != nil {
-		return nil, err
-	}
+	ciphertext := make([]byte, len(plaintext))
 
-	bNonce, err := bytes(nonce)
-	if err != nil {
-		return nil, err
-	}
+	mode := cipher.NewCBCEncrypter(block, nonce)
+	mode.CryptBlocks(ciphertext, plaintext)
 
-	key, err = bytes(key)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(bPlaintext)%aes.BlockSize != 0 {
-		return nil, ErrAES256BlockSize
-	}
-
-	block, err := aes.NewCipher(bKey)
-	if err != nil {
-		return nil, err
-	}
-
-	ciphertext := make([]byte, len(bPlaintext))
-
-	mode := cipher.NewCBCEncrypter(block, bNonce)
-	mode.CryptBlocks(ciphertext, bPlaintext)
-
-	return common.GetRuntime(ctx).NewArrayBuffer(ciphertext), nil
+	return rt.ToValue(rt.NewArrayBuffer(ciphertext))
 }
 
-func (c *Crypto) Aes256Decrypt(ctx context.Context, encrypted, key, nonce interface{}) (interface{}, error) {
-	ciphertext, err := bytes(encrypted)
-	if err != nil {
-		return nil, err
+// Aes256Decrypt encrypted interface{}, key interface{}, nonce interface{}
+func (c *Crypto) Aes256Decrypt(call goja.FunctionCall, rt *goja.Runtime /*encrypted, key, nonce interface{}*/) goja.Value {
+
+	var ciphertext, key, nonce []byte
+	var err error
+
+	if ciphertext, err = bytes(call.Argument(0)); err != nil {
+		return rt.ToValue(fmt.Sprintf("error: ciphertext %v", err))
 	}
 
-	bKey, err := bytes(key)
-	if err != nil {
-		return nil, err
+	if key, err = bytes(call.Argument(1)); err != nil {
+		return rt.ToValue(fmt.Sprintf("error: key %v", err))
 	}
 
-	bNonce, err := bytes(nonce)
-	if err != nil {
-		return nil, err
+	if nonce, err = bytes(call.Argument(2)); err != nil {
+		return rt.ToValue(fmt.Sprintf("error: nonce %v", err))
 	}
 
-	block, err := aes.NewCipher(bKey)
+	block, err := aes.NewCipher(key)
 	if err != nil {
-		return nil, err
+		return rt.ToValue(fmt.Sprintf("%s", err.Error()))
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		return nil, errors.New("ciphertext too short")
+		return rt.ToValue(fmt.Sprintln("error: ciphertext too short"))
 	}
 
 	if len(ciphertext)%aes.BlockSize != 0 {
-		return nil, ErrAES256BlockSize
+		return rt.ToValue(fmt.Sprintf("%s: %d", ErrAES256BlockSize.Error(), len(ciphertext)))
 	}
 
 	plaintext := make([]byte, len(ciphertext))
-	mode := cipher.NewCBCDecrypter(block, bNonce)
+	mode := cipher.NewCBCDecrypter(block, nonce)
 	mode.CryptBlocks(plaintext, ciphertext)
 
-	return common.GetRuntime(ctx).NewArrayBuffer(plaintext), nil
+	return rt.ToValue(rt.NewArrayBuffer(plaintext))
 }
