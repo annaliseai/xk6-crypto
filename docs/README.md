@@ -156,3 +156,53 @@ Supported hash function names:
 **Returns:** ArrayBuffer
 
 The generated derived key.
+
+---
+
+### aes256Encrypt
+
+▸ **aes256Encrypt**(`plaintext`: [*ByteArrayLike*](README.md#bytearraylike), `key`: [*ByteArrayLike*](README.md#bytearraylike), `nonce`: [*ByteArrayLike*](README.md#bytearraylike)): ArrayBuffer
+
+Advanced Encryption Standard (AES) 256-bit encryption implementation.
+
+AES is a symmetric encryption algorithm that was standardized by NIST in 2001. This encryption algorithm variant of
+AES uses a 256-bit encryption key to encrypt 128-bit blocks involving a series of XOR substitutions and permutation
+operations, as well as key expansion. The algorithm takes in plaintext cipher or encryption `key` and an
+initialisation vector (IV) or `nonce`. The key should be at least 32-bytes and generated using a pseudorandom
+generator. It should be kept secret and never expose. The `nonce` should be randomly generated but does not need 
+sensitively stored.
+
+#### Parameters
+
+| Name        | Type                                       | Description                                                |
+|:------------|:-------------------------------------------|:-----------------------------------------------------------|
+| `plaintext` | [*ByteArrayLike*](README.md#bytearraylike) | The source password for key generation.                    |
+| `key`       | [*ByteArrayLike*](README.md#bytearraylike) | The 256-bit encryption key required to decrypt the data.   |
+| `salt`      | [*ByteArrayLike*](README.md#bytearraylike) | The initialisation vector or nonce and should be 128-bits. |
+
+**Returns:** ArrayBuffer
+
+The generated ciphertext.
+
+### aes256Decrypt
+
+▸ **aes256Decrypt**(`ciphertext`: [*ByteArrayLike*](README.md#bytearraylike), `key`: [*ByteArrayLike*](README.md#bytearraylike), `nonce`: [*ByteArrayLike*](README.md#bytearraylike)): ArrayBuffer
+
+Advanced Encryption Standard (AES) 256-bit decryption implementation.
+
+AES is a symmetric encryption algorithm that was standardized by NIST in 2001. This decryption algorithm is the
+inverse of `aes256Encrypt` which uses a 256-bit encryption key to encrypt 128-bit blocks. The algorithm takes in
+byte array or string that is the `encrypted` data, and an encryption `key` and initialisation vector (IV) or `nonce`.
+The key should be at least 32-bytes needs to be the same used to encrypt the data.
+
+#### Parameters
+
+| Name         | Type                                       | Description                                                |
+|:-------------|:-------------------------------------------|:-----------------------------------------------------------|
+| `ciphertext` | [*ByteArrayLike*](README.md#bytearraylike) | The encrypted data as a byte array or string to decrypt.   |
+| `key`        | [*ByteArrayLike*](README.md#bytearraylike) | The 256-bit encryption key required to decrypt the data.   |
+| `salt`       | [*ByteArrayLike*](README.md#bytearraylike) | The initialisation vector or nonce and should be 128-bits. |
+
+**Returns:** ArrayBuffer
+
+The decrypted plaintext.

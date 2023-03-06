@@ -24,6 +24,8 @@ Functions:
 - [generateKeyPair](docs/README.md#generatekeypair)
 - [hkdf](docs/README.md#hkdf)
 - [pbkdf2](docs/README.md#pbkdf2)
+- [aes256Encrypt](docs/README.md#aes256Encrypt)
+- [aes256Decrypt](docs/README.md#aes256Decrypt)
 
 For complete API documentation click [here](docs/README.md)!
 
