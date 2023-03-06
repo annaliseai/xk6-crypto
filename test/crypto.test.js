@@ -167,4 +167,24 @@ export function testDefault() {
       .as("shared secrets equals")
       .toBeTruthy();
   });
+
+  describe('aes256Encrypt', (t) => {
+    const dk = pbkdf2('po2jie0uiphohshaizeuch9Mau3Ree7Airie7ulovoh2Ohzi', 'emperorP', 10000, 48, 'sha256');
+    const key = dk.slice(0, 32);
+    const iv = dk.slice(32);
+
+    const encrypted = xcrypto.aes256Encrypt('ExecuteOrder6Six', key, iv);
+    t.expect(encrypted.byteLength).as('AES encoded key len').toEqual(16);
+  })
+
+  describe('aes256Decrypt', (t) => {
+    const encrypted = xcrypto.aes256Encrypt('ExecuteOrder6Six', 'Uwohw6aitiec7aoc3fohquohngumiob8', 'ohZieJei2xosh0th');
+
+    const decrypted = xcrypto.aes256Decrypt(
+        encrypted,
+        'Uwohw6aitiec7aoc3fohquohngumiob8',
+        'ohZieJei2xosh0th'
+    );
+    t.expect(decrypted.byteLength).as('AES decoded key len').toEqual(16);
+  })
 }
