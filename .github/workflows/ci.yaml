@@ -1,0 +1,55 @@
+name: Run tests
+
+on:
+  push:
+    branches: ['**']
+
+env:
+  K6_VERSION: v0.43.1
+  K6_ARCH: linux-amd64
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      GOFLAGS: "-buildvcs=false"
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.19"
+          cache: true
+      - name: generate
+        run: go generate ./...
+      - name: Snyk Test
+        uses: snyk/actions/golang@master
+      - name: Snyk Monitor
+        uses: snyk/actions/golang@master
+        with:
+          command: monitor
+  
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: "1.19"
+          cache: true
+      - run: |
+          go mod download
+          go generate ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.51.1
+          args: --timeout 3m --verbose
+          skip-pkg-cache: true
+          skip-build-cache: true
+      - name: Install xk6
+        run: go install go.k6.io/xk6/cmd/xk6@latest
+      - name: Build
+        run: xk6 build --with github.com/szkiba/xk6-crypto=.
+      - name: Test
+        run: ./k6 run --no-usage-report test/crypto.test.js
