@@ -16,6 +16,12 @@ export VERSION=${1:-$(git describe --tags --always --dirty)}
 export VERSION_DETAILS=${2-"$(date -u +"%FT%T%z")/$(git describe --tags --always --long --dirty)"}
 set +x
 
+prepare() {
+    go mod tidy -compat=1.18
+    go generate ./...
+    go install go.k6.io/xk6/cmd/xk6@latest
+}
+
 build() {
     local ALIAS="$1" SUFFIX="${2}"  # Any other arguments are passed to the go build command as env vars
     local NAME="k6-${VERSION}-${ALIAS}"
@@ -34,9 +40,6 @@ build() {
     (
         export "${ENV_VARS[@]}"
         # Build a binary
-        go mod tidy -compat=1.18
-        go generate ./...
-        go install go.k6.io/xk6/cmd/xk6@latest
         xk6 build "${K6_VERSION}" --with github.com/szkiba/xk6-crypto=.
 
         for format in "${PACKAGE_FORMATS[@]}"; do
@@ -66,7 +69,11 @@ cleanup() {
     find "$OUT_DIR" -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} \;
     echo "--- Cleaned ${OUT_DIR}"
 }
+
+echo "--- Preparing Dependencies: ${VERSION}"
+
 trap cleanup EXIT
+prepare
 
 echo "--- Building Release: ${VERSION}"
 
