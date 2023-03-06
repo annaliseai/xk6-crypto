@@ -70,9 +70,6 @@ export default function () {
   })
 
   describe('aes256Decrypt', (t) => {
-    // const cipherText = 'XRg//ECBKrqCXsJr979CSw=='
-    // const decoded = atob(cipherText)
-
     const encrypted = aes256Encrypt('ExecuteOrder6Six', 'Uwohw6aitiec7aoc3fohquohngumiob8', 'ohZieJei2xosh0th');
 
     const decrypted = aes256Decrypt(
