@@ -3,10 +3,10 @@ module github.com/szkiba/xk6-crypto
 go 1.18
 
 require (
-	github.com/dop251/goja v0.0.0-20230118114522-2c325f1ef691
+	github.com/dop251/goja v0.0.0-20230128084908-78b980256d04
 	github.com/oasisprotocol/ed25519 v0.0.0-20210505154701-76d8c688d86e
-	go.k6.io/k6 v0.42.0
-	golang.org/x/crypto v0.5.0
+	go.k6.io/k6 v0.43.1
+	golang.org/x/crypto v0.7.0
 )
 
 require (
@@ -24,8 +24,8 @@ require (
 	github.com/serenize/snaker v0.0.0-20201027110005-a7ad2135616e // indirect
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/afero v1.1.2 // indirect
-	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
+	golang.org/x/sys v0.6.0 // indirect
+	golang.org/x/text v0.8.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	gopkg.in/guregu/null.v3 v3.3.0 // indirect
 )
