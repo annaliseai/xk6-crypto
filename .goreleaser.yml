@@ -1,0 +1,50 @@
+# This is an example .goreleaser.yml file with some sane defaults.
+# Make sure to check the documentation at http://goreleaser.com
+project_name: k6
+builds:
+  - id: k6
+    skip: true
+    main: '.'
+    binary: k6
+    hooks:
+      pre:
+        - go mod tidy -compat=1.18
+        - go generate ./...
+        - go install go.k6.io/xk6/cmd/xk6@latest
+        - xk6 build v0.43.1 --with github.com/szkiba/xk6-crypto=.
+    targets:
+      - linux_amd64
+      - darwin_amd64
+      - darwin_arm64
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - K6_VERSION=v0.43.1
+    no_main_check: true
+
+archives:
+  - id: k6
+    hooks:
+      before:
+      - go mod tidy -compat=1.18
+      - go generate ./...
+      - go install go.k6.io/xk6/cmd/xk6@latest
+      - xk6 build v0.43.1 --with github.com/szkiba/xk6-crypto=.
+    builds:
+    name_template: "k6_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+release:
+  ids:
+    - k6
+
+checksum:
+  name_template: 'checksums-v{{ .Version }}.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next-{{.ShortCommit}}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^tes`t:'
