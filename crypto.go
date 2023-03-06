@@ -89,6 +89,8 @@ func (mi *ModuleInstance) Exports() modules.Exports {
 			"pbkdf2":          mi.Crypto.Pbkdf2,
 			"generateKeyPair": mi.Crypto.GenerateKeyPair,
 			"ecdh":            mi.Crypto.Ecdh,
+			"aes256Encrypt":   mi.Crypto.Aes256Encrypt,
+			"aes256Decrypt":   mi.Crypto.Aes256Decrypt,
 		}}
 }
 
@@ -274,11 +276,9 @@ func (c *Crypto) Aes256Encrypt(call goja.FunctionCall, rt *goja.Runtime /*plaint
 	if plaintext, err = bytes(call.Argument(0)); err != nil {
 		return rt.ToValue(fmt.Sprintf("error: plaintext %v", err))
 	}
-
 	if key, err = bytes(call.Argument(1)); err != nil {
 		return rt.ToValue(fmt.Sprintf("error: key %v", err))
 	}
-
 	if nonce, err = bytes(call.Argument(2)); err != nil {
 		return rt.ToValue(fmt.Sprintf("error: nonce %v", err))
 	}
@@ -289,7 +289,7 @@ func (c *Crypto) Aes256Encrypt(call goja.FunctionCall, rt *goja.Runtime /*plaint
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return rt.ToValue(fmt.Sprintf("%s", err.Error()))
+		return rt.ToValue(fmt.Sprintf("error: %v", err))
 	}
 
 	ciphertext := make([]byte, len(plaintext))
@@ -302,31 +302,27 @@ func (c *Crypto) Aes256Encrypt(call goja.FunctionCall, rt *goja.Runtime /*plaint
 
 // Aes256Decrypt encrypted interface{}, key interface{}, nonce interface{}
 func (c *Crypto) Aes256Decrypt(call goja.FunctionCall, rt *goja.Runtime /*encrypted, key, nonce interface{}*/) goja.Value {
-
 	var ciphertext, key, nonce []byte
 	var err error
 
 	if ciphertext, err = bytes(call.Argument(0)); err != nil {
 		return rt.ToValue(fmt.Sprintf("error: ciphertext %v", err))
 	}
-
-	if key, err = bytes(call.Argument(1)); err != nil {
+	if key, err = bytes(call.Argument(1).ToString()); err != nil {
 		return rt.ToValue(fmt.Sprintf("error: key %v", err))
 	}
-
 	if nonce, err = bytes(call.Argument(2)); err != nil {
 		return rt.ToValue(fmt.Sprintf("error: nonce %v", err))
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return rt.ToValue(fmt.Sprintf("%s", err.Error()))
+		return rt.ToValue(fmt.Sprintf("error: %v", err))
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		return rt.ToValue(fmt.Sprintln("error: ciphertext too short"))
+		return rt.ToValue(fmt.Sprintf("error: %s", "ciphertext too short"))
 	}
-
 	if len(ciphertext)%aes.BlockSize != 0 {
 		return rt.ToValue(fmt.Sprintf("%s: %d", ErrAES256BlockSize.Error(), len(ciphertext)))
 	}
