@@ -15,6 +15,24 @@ env:
   K6_VERSION: v0.43.1
 
 jobs:
+  configure:
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.get_version_tag.outputs.version_tag }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get the version tag
+        id: get_version_tag
+        run: |
+          set -x # Show exactly what commands are executed
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            VERSION="${{ github.ref_name }}"
+          else
+            VERSION="$(git describe --tags --always --long --dirty)"
+          fi
+          echo "VERSION=${VERSION}"
+          echo "version_tag=${VERSION}" >> $GITHUB_OUTPUT
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -60,7 +78,6 @@ jobs:
       - name: Install xk6
         run: go install go.k6.io/xk6/cmd/xk6@latest
       - name: Build release
-        run: .github/scripts/build-k6-release.sh ${{ github.ref_name }}
+        run: .github/scripts/build-k6-release.sh ${{ needs.configure.outputs.version_tag }}
       - name: Push to s3
-        working-directory: xk6-crypto
         run: aws s3 cp --recursive dist/ s3://${{ secrets.AWS_S3_ARTIFACTS_BUCKET }}/k6/
