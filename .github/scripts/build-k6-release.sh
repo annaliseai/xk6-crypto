@@ -32,8 +32,6 @@ build() {
 
     echo "- Building platform: ${ALIAS} (" "${ENV_VARS[@]}" "xk6 build ${K6_VERSION} --with github.com/szkiba/xk6-crypto=." ")"
 
-#    mkdir -p "${OUT_DIR}/${NAME}"
-
     # Subshell to not mess with the current env vars or CWD
     (
         export "${ENV_VARS[@]}"
@@ -41,10 +39,6 @@ build() {
         xk6 build "${K6_VERSION}" \
           --with github.com/szkiba/xk6-crypto=. \
           --output "${OUT_DIR}/${NAME}"
-
-#        for format in "${PACKAGE_FORMATS[@]}"; do
-#            package "$format"
-#        done
     )
 }
 
