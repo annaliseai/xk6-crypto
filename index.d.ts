@@ -115,3 +115,33 @@ export declare function generateKeyPair(algorithm: string, seed?: ByteArrayLike)
  * @returns The derived shared secret. The result will be same with Bob's private key and Alice's public key.
  */
 export declare function ecdh(algorithm: string, privateKey: ArrayBuffer, publicKey: ArrayBuffer): ArrayBuffer;
+
+/**
+ * Advanced Encryption Standard (AES) 256-bit encryption implementation.
+ *
+ * AES is a symmetric encryption algorithm that was standardized by NIST in 2001. This encryption algorithm variant of
+ * AES uses a 256-bit encryption key to encrypt 128-bit blocks involving a series of XOR substitutions and permutation
+ * operations, as well as key expansion. The algorithm takes in plaintext cipher or encryption `key` and an
+ * initialisation vector (IV) or `nonce`. The key should be at least 32-bytes and generated using a pseudorandom
+ * generator. It should be kept secret and never expose. The `nonce` should be randomly generated but does not need
+ * sensitively stored.
+ *
+ * @param plaintext The original, unencrypted data to encrypt.
+ * @param key The 256-bit encryption key required to decrypt the data.
+ * @param nonce The initialisation vector or nonce and should be 128-bits.
+ */
+export declare function aes256Encrypt(plaintext: ByteArrayLike, key: ByteArrayLike, nonce: ByteArrayLike): ArrayBuffer;
+
+/**
+ * Advanced Encryption Standard (AES) 256-bit decryption implementation.
+ *
+ * AES is a symmetric encryption algorithm that was standardized by NIST in 2001. This decryption algorithm is the
+ * inverse of `aes256Encrypt` which uses a 256-bit encryption key to encrypt 128-bit blocks. The algorithm takes in
+ * byte array or string that is the `encrypted` data, and an encryption `key` and initialisation vector (IV) or `nonce`.
+ * The key should be at least 32-bytes needs to be the same used to encrypt the data.
+ *
+ * @param ciphertext The encrypted data as a byte array or string to decrypt.
+ * @param key The 256-bit encryption key required to decrypt the data.
+ * @param nonce The initialisation vector or nonce and should be 128-bits.
+ */
+export declare function aes256Decrypt(ciphertext: ByteArrayLike, key: ByteArrayLike, nonce: ByteArrayLike): ArrayBuffer;
