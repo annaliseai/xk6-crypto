@@ -34,7 +34,7 @@ build() {
 
     echo "- Building platform: ${ALIAS} (" "${ENV_VARS[@]}" "xk6 build ${K6_VERSION} --with github.com/szkiba/xk6-crypto=." ")"
 
-    mkdir -p "${OUT_DIR}/${NAME}"
+#    mkdir -p "${OUT_DIR}/${NAME}"
 
     # Subshell to not mess with the current env vars or CWD
     (
@@ -80,6 +80,7 @@ prepare
 echo "--- Building Release: ${VERSION}"
 
 mkdir -p "$OUT_DIR"
+chown -R "$USER":"$USER" "$OUT_DIR/"
 
 build linux-amd64    ""    tgz    GOOS=linux,GOARCH=amd64,CGO_ENABLED=0
 build linux-arm64    ""    tgz    GOOS=linux,GOARCH=arm64,CGO_ENABLED=0
