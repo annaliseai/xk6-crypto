@@ -1,0 +1,51 @@
+name: CI - k6 binary with extensions
+
+on:
+  push:
+    branches:
+      - '**'
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+env:
+  K6_VERSION: v0.43.1
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - run: git fetch --force --tags
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19.x
+          check-latest: true
+          cache: true
+      - run: |
+          go mod download
+          go generate ./...
+      - uses: golangci/golangci-lint-action@v3
+        continue-on-error: true
+        with:
+          version: v1.51.1
+          args: --timeout 3m --verbose
+          skip-pkg-cache: true
+          skip-build-cache: true
+      - name: Install xk6
+        run: go install go.k6.io/xk6/cmd/xk6@latest
+      - name: Build
+        run: xk6 build --with github.com/szkiba/xk6-crypto=.
+      - name: Test
+        run: ./k6 run --no-usage-report test/crypto.test.js
+        
+  release:
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v3
+      - uses: annaliseai/enterprise-k6-tests/.github/workflows/k6_release_build.yml@optsw-8301
+        with:
+          branch: 'release/v0.43.1'
+          version_tag: ${{ github.ref_name }}
+          k6_version: ${{ env.K6_VERSION }}

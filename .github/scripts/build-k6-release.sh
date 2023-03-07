@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -eEuo pipefail
 
 eval "$(go env)"
@@ -7,13 +6,12 @@ eval "$(go env)"
 set -x
 
 export K6_VERSION=${K6_VERSION-v0.43.1}
-
 export OUT_DIR=dist
-# To override the latest git tag as the version, pass something else as the second arg.
+# To override the latest git tag as the version, pass something else as the first arg.
 export VERSION=${1:-$(git describe --tags --always --dirty)}
-
-# To overwrite the version details, pass something as the third arg. Empty string disables it.
+# To overwrite the version details, pass something as the second arg. Empty string disables it.
 export VERSION_DETAILS=${2-"$(date -u +"%FT%T%z")/$(git describe --tags --always --long --dirty)"}
+
 set +x
 
 prepare() {
@@ -23,14 +21,14 @@ prepare() {
 }
 
 build() {
-    local ALIAS="$1" SUFFIX="${2}"  # Any other arguments are passed to the go build command as env vars
+    local ALIAS="$1"  # Any other arguments are passed to the go build command as env vars
     local NAME="k6-${VERSION}-${ALIAS}"
 
     local PACKAGE_FORMATS
-    IFS="," read -ra PACKAGE_FORMATS <<< "${3}"
+    IFS="," read -ra PACKAGE_FORMATS <<< "${2}"
 
     local ENV_VARS
-    IFS="," read -ra ENV_VARS <<< "${4}"
+    IFS="," read -ra ENV_VARS <<< "${3}"
 
     echo "- Building platform: ${ALIAS} (" "${ENV_VARS[@]}" "xk6 build ${K6_VERSION} --with github.com/szkiba/xk6-crypto=." ")"
 
@@ -82,7 +80,7 @@ echo "--- Building Release: ${VERSION}"
 mkdir -p "$OUT_DIR"
 sudo chown -R "$USER":"$USER" "$OUT_DIR/"
 
-build linux-amd64    ""    tgz    GOOS=linux,GOARCH=amd64,CGO_ENABLED=0
-build linux-arm64    ""    tgz    GOOS=linux,GOARCH=arm64,CGO_ENABLED=0
-build darwin-amd64   ""    zip    GOOS=darwin,GOARCH=amd64
-build darwin-arm64   ""    zip    GOOS=darwin,GOARCH=arm64
+build linux-amd64    tgz    GOOS=linux,GOARCH=amd64,CGO_ENABLED=0
+build linux-arm64    tgz    GOOS=linux,GOARCH=arm64,CGO_ENABLED=0
+build darwin-amd64   zip    GOOS=darwin,GOARCH=amd64
+build darwin-arm64   zip    GOOS=darwin,GOARCH=arm64
