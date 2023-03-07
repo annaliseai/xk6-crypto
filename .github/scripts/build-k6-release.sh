@@ -40,11 +40,13 @@ build() {
     (
         export "${ENV_VARS[@]}"
         # Build a binary
-        xk6 build "${K6_VERSION}" --with github.com/szkiba/xk6-crypto=.
+        xk6 build "${K6_VERSION}" \
+          --with github.com/szkiba/xk6-crypto=. \
+          --output "${OUT_DIR}/${NAME}"
 
-        for format in "${PACKAGE_FORMATS[@]}"; do
-            package "$format"
-        done
+#        for format in "${PACKAGE_FORMATS[@]}"; do
+#            package "$format"
+#        done
     )
 }
 
