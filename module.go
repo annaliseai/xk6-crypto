@@ -42,13 +42,12 @@ func (mi *ModuleInstance) Exports() modules.Exports {
 	return modules.Exports{
 		Default: mi.crypto,
 		Named: map[string]interface{}{
-			"hkdf":                  mi.crypto.Hkdf,
-			"pbkdf2":                mi.crypto.Pbkdf2,
-			"generateKeyPair":       mi.crypto.GenerateKeyPair,
-			"ecdh":                  mi.crypto.Ecdh,
-			"aes256Encrypt":         mi.crypto.Aes256Encrypt,
-			"aes256Decrypt":         mi.crypto.Aes256Decrypt,
-			"annaliseAes256Decrypt": mi.crypto.AnnaliseAes256Decrypt,
+			"hkdf":            mi.crypto.Hkdf,
+			"pbkdf2":          mi.crypto.Pbkdf2,
+			"generateKeyPair": mi.crypto.GenerateKeyPair,
+			"ecdh":            mi.crypto.Ecdh,
+			"aes256Encrypt":   mi.crypto.Aes256Encrypt,
+			"aes256Decrypt":   mi.crypto.Aes256Decrypt,
 		},
 	}
 }
