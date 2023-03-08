@@ -133,7 +133,7 @@ export function testDefault() {
 
     const encrypted = aes256Encrypt('ExecuteOrder6Six', key, iv);
     t.expect(typeof(encrypted) === 'object').as('plaintext encrypted').toBeTruthy();
-    t.expect(encrypted.byteLength).as('ciphertext key len').toEqual(16);
+    t.expect(encrypted.byteLength).as('ciphertext key len').toEqual(32); // includes padding
   })
 
   describe('aes256Decrypt byte array', (t) => {
