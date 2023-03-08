@@ -34,9 +34,11 @@ import ( // nolint:gci
 	"errors"
 	"fmt"
 	"hash"
+	"reflect"
 	"strings"
 
 	"github.com/dop251/goja"
+	"github.com/mergermarket/go-pkcs7"
 	ed25519X "github.com/oasisprotocol/ed25519"
 	x25519X "github.com/oasisprotocol/ed25519/extra/x25519"
 	"go.k6.io/k6/js/common"
@@ -45,53 +47,21 @@ import ( // nolint:gci
 	"golang.org/x/crypto/pbkdf2"
 )
 
-// Register the extensions on module initialization.
-func init() {
-	modules.Register("k6/x/crypto", New())
-}
-
-type KeyPair struct {
-	PrivateKey goja.ArrayBuffer `js:"privateKey"`
-	PublicKey  goja.ArrayBuffer `js:"publicKey"`
-}
-
 type (
-	Crypto struct{}
-
-	ModuleInstance struct {
+	Crypto struct {
 		vu modules.VU
-		*Crypto
+	}
+
+	KeyPair struct {
+		PrivateKey interface{} `js:"privateKey"`
+		PublicKey  interface{} `js:"publicKey"`
 	}
 )
 
-var _ modules.Instance = &ModuleInstance{}
-
-func New() *Crypto {
-	return &Crypto{}
-}
-
-// NewModuleInstance implements the modules.Module interface and returns
-// a new instance for each VU.
-func (*Crypto) NewModuleInstance(vu modules.VU) modules.Instance {
-	return &ModuleInstance{
-		vu:     vu,
-		Crypto: &Crypto{},
+func newCrypto(vu modules.VU) *Crypto {
+	return &Crypto{
+		vu: vu,
 	}
-}
-
-// Exports implements the modules.Instance interface and returns
-// the exports of the JS module.
-func (mi *ModuleInstance) Exports() modules.Exports {
-	return modules.Exports{
-		Default: &Crypto{},
-		Named: map[string]interface{}{
-			"hkdf":            mi.Crypto.Hkdf,
-			"pbkdf2":          mi.Crypto.Pbkdf2,
-			"generateKeyPair": mi.Crypto.GenerateKeyPair,
-			"ecdh":            mi.Crypto.Ecdh,
-			"aes256Encrypt":   mi.Crypto.Aes256Encrypt,
-			"aes256Decrypt":   mi.Crypto.Aes256Decrypt,
-		}}
 }
 
 type hashInfo struct {
@@ -103,7 +73,7 @@ var (
 	ErrUnsupportedHash      = errors.New("unsupported hash")
 	ErrInvalidKeyLen        = errors.New("invalid keylen")
 	ErrUnsupportedAlgorithm = errors.New("unsupported algorithm")
-	ErrAES256BlockSize      = errors.New("ciphertext is not a multiple of the block size")
+	ErrAES256BlockSize      = errors.New("data is not a multiple of the block size")
 
 	hashes = map[string]hashInfo{
 		"md5":    {fn: md5.New, size: md5.Size},
@@ -116,141 +86,17 @@ var (
 
 const hkdfMaxFactor = 255
 
-func bytes(in goja.Value) ([]byte, error) {
-	if in == nil || in.Export() == nil {
+func bytes(in interface{}) ([]byte, error) {
+	if in == nil || reflect.ValueOf(in).IsZero() {
 		return nil, nil
 	}
 
-	val, err := common.ToBytes(in.Export())
+	val, err := common.ToBytes(in)
 	if err != nil {
-		return nil, fmt.Errorf("%w", err)
+		return nil, fmt.Errorf("error: %w", err)
 	}
 
 	return val, nil
-}
-
-// Hkdf hash string, secretIn, saltIn, infoIn interface{}, keylen int
-func (c *Crypto) Hkdf(call goja.FunctionCall, rt *goja.Runtime) goja.Value {
-	hashIn := call.Argument(0).String()
-	alg, ok := hashes[strings.ToLower(hashIn)]
-	if !ok {
-		return rt.ToValue(fmt.Sprintf("%s: %s", ErrUnsupportedHash.Error(), hashIn))
-	}
-	keylen := int(call.Argument(4).ToInteger())
-	if keylen <= 0 || keylen > alg.size*hkdfMaxFactor {
-		return rt.ToValue(fmt.Sprintf("%s: %d, allowed range 1..%d", ErrInvalidKeyLen.Error(), keylen, alg.size*hkdfMaxFactor))
-	}
-
-	var secret, salt, info []byte
-	var err error
-	if secret, err = bytes(call.Argument(1)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: secret %v", err))
-	}
-	if salt, err = bytes(call.Argument(2)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: salt %v", err))
-	}
-	if info, err = bytes(call.Argument(3)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: info %v", err))
-	}
-
-	r := hkdf.New(alg.fn, secret, salt, info)
-
-	b := make([]byte, keylen)
-
-	if _, err = r.Read(b); err != nil {
-		return rt.ToValue(err.Error())
-	}
-
-	return rt.ToValue(rt.NewArrayBuffer(b))
-}
-
-// Pbkdf2 passwordIn, saltIn interface{}, iter, keylen int, hash string
-func (c *Crypto) Pbkdf2(call goja.FunctionCall, rt *goja.Runtime /*passwordIn, saltIn interface{}, iter, keylen int, hash string*/) goja.Value {
-	hashIn := call.Argument(4).String()
-	alg, ok := hashes[strings.ToLower(hashIn)]
-	if !ok {
-		return rt.ToValue(fmt.Sprintf("%s: %s", ErrUnsupportedHash.Error(), hashIn))
-	}
-	keylen := int(call.Argument(3).ToInteger())
-	if keylen <= 0 {
-		return rt.ToValue(fmt.Sprintf("%s: %d, allowed range 1..∞", ErrInvalidKeyLen.Error(), keylen))
-	}
-	iter := int(call.Argument(2).ToInteger())
-
-	var password, salt []byte
-	var err error
-	if password, err = bytes(call.Argument(0)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: secret %v", err))
-	}
-	if salt, err = bytes(call.Argument(1)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: salt %v", err))
-	}
-
-	b := pbkdf2.Key(password, salt, iter, keylen, alg.fn)
-
-	return rt.ToValue(rt.NewArrayBuffer(b))
-}
-
-// GenerateKeyPair algorithm string, seedIn []byte
-func (c *Crypto) GenerateKeyPair(call goja.FunctionCall, rt *goja.Runtime /*algorithm string, seedIn interface{}*/) goja.Value {
-	algorithm := call.Argument(0).String()
-	alg := strings.ToLower(algorithm)
-
-	seed, err := bytes(call.Argument(1))
-	if err != nil {
-		return rt.ToValue(fmt.Sprintf("error: bad seed: %v", err))
-	}
-
-	if alg == "ed25519" {
-		if seed != nil {
-			priv := ed25519.NewKeyFromSeed(seed)
-			pub, ok := priv.Public().(ed25519.PublicKey)
-
-			if !ok {
-				return rt.ToValue(fmt.Sprintf("%v", ErrUnsupportedAlgorithm))
-			}
-
-			return rt.ToValue(&KeyPair{PublicKey: rt.NewArrayBuffer(pub), PrivateKey: rt.NewArrayBuffer(priv)})
-		}
-
-		if pub, priv, gerr := ed25519.GenerateKey(rand.Reader); gerr != nil {
-			return rt.ToValue(fmt.Sprintf("error: %v", gerr))
-		} else {
-			return rt.ToValue(&KeyPair{PublicKey: rt.NewArrayBuffer(pub), PrivateKey: rt.NewArrayBuffer(priv)})
-		}
-	}
-
-	return rt.ToValue(fmt.Sprintf("%v: %s", ErrUnsupportedAlgorithm, algorithm))
-}
-
-func (c *Crypto) Ecdh(call goja.FunctionCall, rt *goja.Runtime /*algorithm string, privateKey, publicKey goja.ArrayBuffer*/) goja.Value {
-	algorithm := call.Argument(0).String()
-	alg := strings.ToLower(algorithm)
-
-	var privateKey, publicKey []byte
-	var err error
-	if privateKey, err = bytes(call.Argument(1)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: bad privateKey: %v", err))
-	}
-
-	if publicKey, err = bytes(call.Argument(2)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: bad publicKey: %v", err))
-	}
-
-	if alg == "ed25519" {
-		priv := ed25519.PrivateKey(privateKey)
-		pub := ed25519.PublicKey(publicKey)
-
-		var b []byte
-		b, err = sharedSecretED(priv, pub)
-		if err != nil {
-			return rt.ToValue(fmt.Sprintf("error: unable to generate secret: %v", err))
-		}
-
-		return rt.ToValue(rt.NewArrayBuffer(b))
-	}
-
-	return rt.ToValue(fmt.Sprintf("%v: %s", ErrUnsupportedAlgorithm, algorithm))
 }
 
 func sharedSecretED(privateKey ed25519.PrivateKey, publicKey ed25519.PublicKey) ([]byte, error) {
@@ -268,68 +114,190 @@ func sharedSecretED(privateKey ed25519.PrivateKey, publicKey ed25519.PublicKey) 
 	return b, nil
 }
 
-// Aes256Encrypt plaintext interface{}, key interface{}, nonce interface{}
-func (c *Crypto) Aes256Encrypt(call goja.FunctionCall, rt *goja.Runtime /*plaintext, key, nonce interface{}*/) goja.Value {
-	var plaintext, key, nonce []byte
-	var err error
-
-	if plaintext, err = bytes(call.Argument(0)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: plaintext %v", err))
-	}
-	if key, err = bytes(call.Argument(1)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: key %v", err))
-	}
-	if nonce, err = bytes(call.Argument(2)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: nonce %v", err))
+func (c *Crypto) Hkdf(hash string, secretIn, saltIn, infoIn interface{}, keylen int) (interface{}, error) {
+	alg, ok := hashes[strings.ToLower(hash)]
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedHash, hash)
 	}
 
-	if len(plaintext)%aes.BlockSize != 0 {
-		return rt.ToValue(fmt.Sprintf("%s: %d", ErrAES256BlockSize.Error(), len(plaintext)))
+	if keylen <= 0 || keylen > alg.size*hkdfMaxFactor {
+		return nil, fmt.Errorf("%w: %d, allowed range 1..%d", ErrInvalidKeyLen, keylen, alg.size*hkdfMaxFactor)
 	}
 
-	block, err := aes.NewCipher(key)
+	secret, err := bytes(secretIn)
 	if err != nil {
-		return rt.ToValue(fmt.Sprintf("error: %v", err))
+		return nil, err
 	}
 
-	ciphertext := make([]byte, len(plaintext))
+	salt, err := bytes(saltIn)
+	if err != nil {
+		return nil, err
+	}
 
-	mode := cipher.NewCBCEncrypter(block, nonce)
-	mode.CryptBlocks(ciphertext, plaintext)
+	info, err := bytes(infoIn)
+	if err != nil {
+		return nil, err
+	}
 
-	return rt.ToValue(rt.NewArrayBuffer(ciphertext))
+	r := hkdf.New(alg.fn, secret, salt, info)
+
+	b := make([]byte, keylen)
+
+	if _, err := r.Read(b); err != nil {
+		return nil, err
+	}
+
+	return c.vu.Runtime().NewArrayBuffer(b), nil
 }
 
-// Aes256Decrypt encrypted interface{}, key interface{}, nonce interface{}
-func (c *Crypto) Aes256Decrypt(call goja.FunctionCall, rt *goja.Runtime /*encrypted, key, nonce interface{}*/) goja.Value {
-	var ciphertext, key, nonce []byte
-	var err error
+func (c *Crypto) Pbkdf2(passwordIn, saltIn interface{}, iter, keylen int, hash string) (interface{}, error) {
+	alg, ok := hashes[strings.ToLower(hash)]
+	if !ok {
+		return nil, fmt.Errorf("%w: %s", ErrUnsupportedHash, hash)
+	}
 
-	if ciphertext, err = bytes(call.Argument(0)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: ciphertext %v", err))
+	if keylen <= 0 {
+		return nil, fmt.Errorf("%w: %d", ErrInvalidKeyLen, keylen)
 	}
-	if key, err = bytes(call.Argument(1).ToString()); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: key %v", err))
+
+	password, err := bytes(passwordIn)
+	if err != nil {
+		return nil, err
 	}
-	if nonce, err = bytes(call.Argument(2)); err != nil {
-		return rt.ToValue(fmt.Sprintf("error: nonce %v", err))
+
+	salt, err := bytes(saltIn)
+	if err != nil {
+		return nil, err
+	}
+
+	b := pbkdf2.Key(password, salt, iter, keylen, alg.fn)
+
+	return c.vu.Runtime().NewArrayBuffer(b), nil
+}
+
+func (c *Crypto) GenerateKeyPair(algorithm string, seedIn interface{}) (*KeyPair, error) {
+	alg := strings.ToLower(algorithm)
+	rt := c.vu.Runtime()
+
+	seed, err := bytes(seedIn)
+	if err != nil {
+		return nil, err
+	}
+
+	if alg == "ed25519" {
+		if seed != nil {
+			priv := ed25519.NewKeyFromSeed(seed)
+			pub, ok := priv.Public().(ed25519.PublicKey)
+
+			if !ok {
+				return nil, ErrUnsupportedAlgorithm
+			}
+
+			return &KeyPair{PublicKey: rt.NewArrayBuffer(pub), PrivateKey: rt.NewArrayBuffer(priv)}, nil
+		}
+
+		pub, priv, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, err
+		}
+
+		return &KeyPair{PublicKey: rt.NewArrayBuffer(pub), PrivateKey: rt.NewArrayBuffer(priv)}, nil
+	}
+
+	return nil, fmt.Errorf("%w: %s", ErrUnsupportedAlgorithm, algorithm)
+}
+
+func (c *Crypto) Ecdh(algorithm string, privateKey, publicKey goja.ArrayBuffer) (interface{}, error) {
+	alg := strings.ToLower(algorithm)
+	rt := c.vu.Runtime()
+
+	if alg == "ed25519" {
+		priv := ed25519.PrivateKey(privateKey.Bytes())
+		pub := ed25519.PublicKey(publicKey.Bytes())
+
+		b, err := sharedSecretED(priv, pub)
+		if err != nil {
+			return nil, err
+		}
+
+		return rt.NewArrayBuffer(b), nil
+	}
+
+	return nil, fmt.Errorf("%w: %s", ErrUnsupportedAlgorithm, algorithm)
+}
+
+// Aes256Encrypt encrypts plaintext to ciphertext using aes-256-cbc mode
+func (c *Crypto) Aes256Encrypt(plainText, cipherKey, nonce interface{}) (interface{}, error) {
+	plaintext, err := bytes(plainText)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
+	}
+
+	key, err := bytes(cipherKey)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
+	}
+
+	iv, err := bytes(nonce)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
+	}
+
+	paddedPlaintext, err := pkcs7.Pad(plaintext, aes.BlockSize)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
+	}
+	if len(plaintext)%aes.BlockSize != 0 {
+		return nil, fmt.Errorf("error: %w %d", ErrAES256BlockSize, len(plaintext))
 	}
 
 	block, err := aes.NewCipher(key)
 	if err != nil {
-		return rt.ToValue(fmt.Sprintf("error: %v", err))
+		return nil, fmt.Errorf("error: %w", err)
+	}
+
+	ciphertext := make([]byte, len(paddedPlaintext))
+
+	mode := cipher.NewCBCEncrypter(block, iv)
+	mode.CryptBlocks(ciphertext, paddedPlaintext)
+
+	return c.vu.Runtime().NewArrayBuffer(ciphertext), nil
+}
+
+// Aes256Decrypt decrypts an encrypted byte array to plaintext using aes-256-cbc mode
+func (c *Crypto) Aes256Decrypt(cipherText, cipherKey, nonce interface{}) (interface{}, error) {
+	ciphertext, err := bytes(cipherText)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
+	}
+
+	key, err := bytes(cipherKey)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
+	}
+
+	iv, err := bytes(nonce)
+	if err != nil {
+		return nil, fmt.Errorf("error: %w", err)
 	}
 
 	if len(ciphertext) < aes.BlockSize {
-		return rt.ToValue(fmt.Sprintf("error: %s", "ciphertext too short"))
+		return nil, fmt.Errorf("error: ciphertext smaller than block size %d", len(ciphertext))
 	}
 	if len(ciphertext)%aes.BlockSize != 0 {
-		return rt.ToValue(fmt.Sprintf("%s: %d", ErrAES256BlockSize.Error(), len(ciphertext)))
+		return nil, fmt.Errorf("error: %w %d", ErrAES256BlockSize, len(ciphertext))
 	}
 
-	plaintext := make([]byte, len(ciphertext))
-	mode := cipher.NewCBCDecrypter(block, nonce)
-	mode.CryptBlocks(plaintext, ciphertext)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, fmt.Errorf("error: %v", err)
+	}
 
-	return rt.ToValue(rt.NewArrayBuffer(plaintext))
+	// plaintext := make([]byte, len(ciphertext))
+	mode := cipher.NewCBCDecrypter(block, iv)
+	mode.CryptBlocks(ciphertext, ciphertext)
+
+	plaintext, _ := pkcs7.Unpad(ciphertext, len(ciphertext))
+
+	return c.vu.Runtime().NewArrayBuffer(plaintext), nil
 }
