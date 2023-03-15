@@ -102,7 +102,7 @@ HKDF is a simple key derivation function defined in RFC 5869.
 
 The given `secret`, `salt` and `info` are used with the `hash` to derive a key of `keylen` bytes.
 
-An error will be thrown if any of the input aguments specify invalid values or types.
+An error will be thrown if any of the input arguments specify invalid values or types.
 
 Supported hash function names:
  - md5
@@ -161,7 +161,7 @@ The generated derived key.
 
 ### aes256Encrypt
 
-▸ **aes256Encrypt**(`plaintext`: [*ByteArrayLike*](README.md#bytearraylike), `key`: [*ByteArrayLike*](README.md#bytearraylike), `nonce`: [*ByteArrayLike*](README.md#bytearraylike)): ArrayBuffer
+▸ **aes256Encrypt**(`plainText`: [*ByteArrayLike*](README.md#bytearraylike), `cipherKey`: [*ByteArrayLike*](README.md#bytearraylike), `nonce`: [*ByteArrayLike*](README.md#bytearraylike)): ArrayBuffer
 
 Advanced Encryption Standard (AES) 256-bit encryption implementation.
 
@@ -176,9 +176,9 @@ sensitively stored.
 
 | Name        | Type                                       | Description                                                |
 |:------------|:-------------------------------------------|:-----------------------------------------------------------|
-| `plaintext` | [*ByteArrayLike*](README.md#bytearraylike) | The source password for key generation.                    |
-| `key`       | [*ByteArrayLike*](README.md#bytearraylike) | The 256-bit encryption key required to decrypt the data.   |
-| `salt`      | [*ByteArrayLike*](README.md#bytearraylike) | The initialisation vector or nonce and should be 128-bits. |
+| `plainText` | [*ByteArrayLike*](README.md#bytearraylike) | The source password for key generation.                    |
+| `cipherKey` | [*ByteArrayLike*](README.md#bytearraylike) | The 256-bit encryption key required to decrypt the data.   |
+| `nonce`     | [*ByteArrayLike*](README.md#bytearraylike) | The initialisation vector or nonce and should be 128-bits. |
 
 **Returns:** ArrayBuffer
 
@@ -186,7 +186,7 @@ The generated ciphertext.
 
 ### aes256Decrypt
 
-▸ **aes256Decrypt**(`ciphertext`: [*ByteArrayLike*](README.md#bytearraylike), `key`: [*ByteArrayLike*](README.md#bytearraylike), `nonce`: [*ByteArrayLike*](README.md#bytearraylike)): ArrayBuffer
+▸ **aes256Decrypt**(`cipherText`: [*ByteArrayLike*](README.md#bytearraylike), `cipherKey`: [*ByteArrayLike*](README.md#bytearraylike), `nonce`: [*ByteArrayLike*](README.md#bytearraylike)): ArrayBuffer
 
 Advanced Encryption Standard (AES) 256-bit decryption implementation.
 
@@ -199,9 +199,9 @@ The key should be at least 32-bytes needs to be the same used to encrypt the dat
 
 | Name         | Type                                       | Description                                                |
 |:-------------|:-------------------------------------------|:-----------------------------------------------------------|
-| `ciphertext` | [*ByteArrayLike*](README.md#bytearraylike) | The encrypted data as a byte array or string to decrypt.   |
-| `key`        | [*ByteArrayLike*](README.md#bytearraylike) | The 256-bit encryption key required to decrypt the data.   |
-| `salt`       | [*ByteArrayLike*](README.md#bytearraylike) | The initialisation vector or nonce and should be 128-bits. |
+| `cipherText` | [*ByteArrayLike*](README.md#bytearraylike) | The encrypted data as a byte array or string to decrypt.   |
+| `cipherKey`  | [*ByteArrayLike*](README.md#bytearraylike) | The 256-bit encryption key required to decrypt the data.   |
+| `nonce`      | [*ByteArrayLike*](README.md#bytearraylike) | The initialisation vector or nonce and should be 128-bits. |
 
 **Returns:** ArrayBuffer
 

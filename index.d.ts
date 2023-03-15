@@ -29,7 +29,7 @@ export type ByteArrayLike = ArrayBuffer | string | bytes;
  *
  * The given `secret`, `salt` and `info` are used with the `hash` to derive a key of `keylen` bytes.
  *
- * An error will be thrown if any of the input aguments specify invalid values or types.
+ * An error will be thrown if any of the input arguments specify invalid values or types.
  *
  * Supported hash function names:
  *  - md5
@@ -126,11 +126,11 @@ export declare function ecdh(algorithm: string, privateKey: ArrayBuffer, publicK
  * generator. It should be kept secret and never expose. The `nonce` should be randomly generated but does not need
  * sensitively stored.
  *
- * @param plaintext The original, unencrypted data to encrypt.
- * @param key The 256-bit encryption key required to decrypt the data.
+ * @param plainText The original, unencrypted data to encrypt.
+ * @param cipherKey The 256-bit encryption key required to decrypt the data.
  * @param nonce The initialisation vector or nonce and should be 128-bits.
  */
-export declare function aes256Encrypt(plaintext: ByteArrayLike, key: ByteArrayLike, nonce: ByteArrayLike): ArrayBuffer;
+export declare function aes256Encrypt(plainText: ByteArrayLike, cipherKey: ByteArrayLike, nonce: ByteArrayLike): ArrayBuffer;
 
 /**
  * Advanced Encryption Standard (AES) 256-bit decryption implementation.
@@ -140,8 +140,9 @@ export declare function aes256Encrypt(plaintext: ByteArrayLike, key: ByteArrayLi
  * byte array or string that is the `encrypted` data, and an encryption `key` and initialisation vector (IV) or `nonce`.
  * The key should be at least 32-bytes needs to be the same used to encrypt the data.
  *
- * @param ciphertext The encrypted data as a byte array or string to decrypt.
- * @param key The 256-bit encryption key required to decrypt the data.
+ * @param cipherText The encrypted data as a byte array or string to decrypt.
+ * @param cipherKey The 256-bit encryption key required to decrypt the data.
  * @param nonce The initialisation vector or nonce and should be 128-bits.
+ // * @param encoding An encoding to use to decode if the data is sent as a string such as base64 or hex format.
  */
-export declare function aes256Decrypt(ciphertext: ByteArrayLike, key: ByteArrayLike, nonce: ByteArrayLike): ArrayBuffer;
+export declare function aes256Decrypt(cipherText: ByteArrayLike, cipherKey: ByteArrayLike, nonce: ByteArrayLike): ArrayBuffer;

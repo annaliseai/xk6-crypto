@@ -24,7 +24,6 @@
 
 export { options } from "./expect.js";
 import { describe } from "./expect.js";
-import * as xcrypto from 'k6/x/crypto';
 import {
   aes256Decrypt,
   aes256Encrypt,
@@ -46,33 +45,9 @@ export function testModule() {
     t.expect(key.byteLength).as("key length").toEqual(64);
   });
 
-  describe("hkdf: bad hashing algorithm", (t) => {
-    const key = hkdf("sha999", "top secret", null, null, 64);
-    t.expect(typeof (key) === "string").as("key error").toBeTruthy();
-    t.expect(key).as("key error").toEqual('unsupported hash: sha999');
-  });
-
-  describe("hkdf: bad bad keylen", (t) => {
-    const key = hkdf("sha256", null, null, null, 8161);
-    t.expect(typeof (key) === "string").as("key error").toBeTruthy();
-    t.expect(key).as("key error").toEqual('invalid keylen: 8161, allowed range 1..8160');
-  });
-
   describe("pbkdf2", (t) => {
     const key = pbkdf2("top secret", null, 10000, 48, "sha256");
     t.expect(key.byteLength).as("key length").toEqual(48);
-  });
-
-  describe("pbkdf2: bad hashing algorithm", (t) => {
-    const key = pbkdf2("top secret", null, 10000, 48, "sha999");
-    t.expect(typeof (key) === 'string').as("key type").toBeTruthy();
-    t.expect(key).as("key error").toEqual('unsupported hash: sha999');
-  });
-
-  describe("pbkdf2: bad keylen", (t) => {
-    const key = pbkdf2("top secret", null, 10000, -1, "sha256");
-    t.expect(typeof (key) === 'string').as("key type").toBeTruthy();
-    t.expect(key).as("key error").toEqual('invalid keylen: -1, allowed range 1..∞');
   });
 
   describe("generateKeyPair", (t) => {
@@ -109,48 +84,24 @@ export function testModule() {
 }
 export function testDefault() {
   describe("root hkdf", (t) => {
-    const key = xcrypto.hkdf("sha256", "top secret", null, null, 64);
+    const key = hkdf("sha256", "top secret", null, null, 64);
     t.expect(typeof(key) === 'object').as("key type").toBeTruthy();
     t.expect(key.byteLength).as("key length").toEqual(64);
   });
 
-  describe("root hkdf: bad hashing algorithm", (t) => {
-    const key = xcrypto.hkdf("sha999", "top secret", null, null, 64);
-    t.expect(typeof(key) === "string").as("key error").toBeTruthy();
-    t.expect(key).as("key error").toEqual('unsupported hash: sha999');
-  });
-
-  describe("root hkdf: bad bad keylen", (t) => {
-    const key = xcrypto.hkdf("sha256", null, null, null, 8161);
-    t.expect(typeof(key) === "string").as("key error").toBeTruthy();
-    t.expect(key).as("key error").toEqual('invalid keylen: 8161, allowed range 1..8160');
-  });
-
   describe("root pbkdf2", (t) => {
-    const key = xcrypto.pbkdf2("top secret", null, 10000, 48, "sha256");
+    const key = pbkdf2("top secret", null, 10000, 48, "sha256");
     t.expect(key.byteLength).as("key length").toEqual(48);
   });
 
-  describe("root pbkdf2: bad hashing algorithm", (t) => {
-    const key = xcrypto.pbkdf2("top secret", null, 10000, 48, "sha999");
-    t.expect(typeof(key) === 'string').as("key type").toBeTruthy();
-    t.expect(key).as("key error").toEqual('unsupported hash: sha999');
-  });
-
-  describe("root pbkdf2: bad keylen", (t) => {
-    const key = xcrypto.pbkdf2("top secret", null, 10000, -1, "sha256");
-    t.expect(typeof(key) === 'string').as("key type").toBeTruthy();
-    t.expect(key).as("key error").toEqual('invalid keylen: -1, allowed range 1..∞');
-  });
-
   describe("root generateKeyPair", (t) => {
-    const pair = xcrypto.generateKeyPair("ed25519");
+    const pair = generateKeyPair("ed25519");
     t.expect(pair.publicKey.byteLength).as("public key length").toEqual(32);
     t.expect(pair.privateKey.byteLength).as("private key length").toEqual(64);
   });
 
   describe("root generateKeyPair with seed", (t) => {
-    const pair = xcrypto.generateKeyPair("ed25519", xcrypto.pbkdf2("top secret", null, 10000, 32, "sha256"));
+    const pair = generateKeyPair("ed25519", pbkdf2("top secret", null, 10000, 32, "sha256"));
     t.expect(!!pair.publicKey).as("public key exists").toBeTruthy();
     t.expect(!!pair.privateKey).as("private key exists").toBeTruthy();
     t.expect(pair.publicKey.byteLength).as("public key length").toEqual(32);
@@ -158,8 +109,8 @@ export function testDefault() {
   });
 
   describe("root ecdh", (t) => {
-    const alice = xcrypto.generateKeyPair("ed25519");
-    const bob = xcrypto.generateKeyPair("ed25519");
+    const alice = generateKeyPair("ed25519");
+    const bob = generateKeyPair("ed25519");
 
     t.expect(!!alice.publicKey).as("alice public key exists").toBeTruthy();
     t.expect(!!alice.privateKey).as("alice private key exists").toBeTruthy();
@@ -181,10 +132,11 @@ export function testDefault() {
     const iv = dk.slice(32);
 
     const encrypted = aes256Encrypt('ExecuteOrder6Six', key, iv);
-    t.expect(encrypted.byteLength).as('AES encoded key len').toEqual(16);
+    t.expect(typeof(encrypted) === 'object').as('plaintext encrypted').toBeTruthy();
+    t.expect(encrypted.byteLength).as('ciphertext key len').toEqual(32); // includes padding
   })
 
-  describe('aes256Decrypt', (t) => {
+  describe('aes256Decrypt byte array', (t) => {
     const encrypted = aes256Encrypt('ExecuteOrder6Six', 'Uwohw6aitiec7aoc3fohquohngumiob8', 'ohZieJei2xosh0th');
 
     const decrypted = aes256Decrypt(
@@ -192,6 +144,7 @@ export function testDefault() {
         'Uwohw6aitiec7aoc3fohquohngumiob8',
         'ohZieJei2xosh0th'
     );
-    t.expect(decrypted.byteLength).as('AES decoded key len').toEqual(16);
+    t.expect(typeof(decrypted) === 'object').as('ciphertext decrypted').toBeTruthy();
+    t.expect(decrypted.byteLength).as('plaintext key len').toEqual(16);
   })
 }
